@@ -279,22 +279,23 @@ class AudioAnalysis:
         return features, label
         # return features
     
-def collect_data(audio_files, min_length, max_variation):
+def collect_data(audio_files, min_length, max_variation, max_instances):
     features = []
     labels = []
     for file_path in audio_files:
         audio_analysis = AudioAnalysis(file_path, sampling_rate=24000)
         file_features, label = audio_analysis.analyze(min_length, max_variation)
-        features.extend(file_features)
-        labels.extend([label] * len(file_features))
-    print("FEATURES:", features)
-    print("LABELS:", labels)
+        for feature in file_features:
+            if len(features) >= max_instances:
+                return features, labels
+            features.append(feature)
+            labels.append(label)
     return features, labels
 
 def train_and_test_svm(singing_data, speech_data, min_length, max_variation):
     # Collect the data
-    singing_features, singing_labels = collect_data(singing_data, min_length, max_variation)
-    speech_features, speech_labels = collect_data(speech_data, min_length, max_variation)
+    singing_features, singing_labels = collect_data(singing_data, min_length, max_variation, max_instances=47626)
+    speech_features, speech_labels = collect_data(speech_data, min_length, max_variation, max_instances=47626)
 
     # Combine the features and labels
     features = singing_features + speech_features
@@ -335,34 +336,7 @@ def load_audio_files(directory):
                 audio_files.append(filepath)
     return audio_files
 
-# def analyze_and_plot(audio_files, min_length, max_variation, color, label):
-#     scaler = MinMaxScaler()
-#     count = 0  # Initialize the counter
-#     for file_path in audio_files:
-#         audio_analysis = AudioAnalysis(file_path, sampling_rate=16000)
-#         features = audio_analysis.analyze(min_length, max_variation)
-
-#         # Split the features into two lists for the x and y coordinates
-#         if features:  # Checks if the features list is not empty
-#             PV, PN = zip(*features)
-#             # Only plot the samples where PV is not 0
-#             filtered_features = [(pv, pn) for pv, pn in zip(PV, PN) if pv != 0]
-#             if filtered_features:  # Check if the list is not empty
-#                 PV, PN = zip(*filtered_features)
-#                 # Reshape and scale the features
-#                 # PV = np.array(PV).reshape(-1, 1)
-#                 # PN = np.array(PN).reshape(-1, 1)
-#                 # PV = scaler.fit_transform(PV)
-#                 # PN = scaler.fit_transform(PN)
-#                 plt.scatter(PV, PN, color=color, label=f'{label} ({len(PV)})')
-#                 count += len(PV)  # Update the counter
-#         else:
-#             print('No features to plot for the current audio segment.')
-
-#     return count  # Return the total count
-
 def analyze_and_plot(audio_files, min_length, max_variation, color):
-    scaler = MinMaxScaler()
     PV = []
     PN = []
     lengths = []
@@ -408,29 +382,29 @@ def analyze_and_plot(audio_files, min_length, max_variation, color):
     return trace
 
 if __name__ == "__main__":
-    singing_data = load_audio_files('Singing')[:100000]  # Select only the first 1000 singing audio files
+    singing_data = load_audio_files('Singing') # Select only the first 1000 singing audio files
     print(f"Singing data loaded. Number of files: {len(singing_data)}")
-    singing_trace = analyze_and_plot(singing_data, 0.2, 100, 'red')
+    # singing_trace = analyze_and_plot(singing_data, 0.2, 100, 'red')
 
-    speech_data = load_audio_files('Speech')[:100000]  # Select only the first 1000 speech audio files
+    speech_data = load_audio_files('Speech')  # Select only the first 1000 speech audio files
     print(f"Speech data loaded. Number of files: {len(speech_data)}")
-    speech_trace = analyze_and_plot(speech_data, 0.2, 100, 'blue')
+    # speech_trace = analyze_and_plot(speech_data, 0.2, 100, 'blue')
 
-    print("SINGING TRACE IS:", singing_trace)
+    # print("SINGING TRACE IS:", singing_trace)
 
-    train_and_test_svm(singing_data, speech_data, 0.15, 150)
+    train_and_test_svm(singing_data, speech_data, 0.2, 100)
 
-    singing_count = len(singing_trace['x'])
-    speech_count = len(speech_trace['x'])
+    # singing_count = len(singing_trace['x'])
+    # speech_count = len(speech_trace['x'])
 
     # Create the layout for the plot
-    layout = go.Layout(
-        title=f'Audio Analysis (Singing: {singing_count}, Speech: {speech_count})',
-        hovermode='closest',
-        xaxis=dict(title='Proportion of voiced frames'),
-        yaxis=dict(title='Proportion of note frames')
-    )
+    # layout = go.Layout(
+    #     title=f'Audio Analysis (Singing: {singing_count}, Speech: {speech_count})',
+    #     hovermode='closest',
+    #     xaxis=dict(title='Proportion of voiced frames'),
+    #     yaxis=dict(title='Proportion of note frames')
+    # )
 
-    fig = go.Figure(data=[singing_trace, speech_trace], layout=layout)
+    # fig = go.Figure(data=[singing_trace, speech_trace], layout=layout)
 
-    fig.show()
+    # fig.show()
